@@ -1,4 +1,10 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:vallet_jules_movie_explorer/models/movie.dart';
+import 'package:http/http.dart' as http;
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 
 void main() {
   runApp(const MyApp());
@@ -7,116 +13,228 @@ void main() {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: .fromSeed(seedColor: Colors.deepPurple),
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      title: 'Vallet Jules - Movie Explorer',
+      home: MovieList(title: 'Movie list'),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
+// Stateful widget for the movie list
+class MovieList extends StatefulWidget {
+  MovieList({super.key, required this.title});
 
   final String title;
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<MovieList> createState() => _MovieListState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class MovieDetails extends StatefulWidget {
+  MovieDetails({super.key, required this.title, required this.movieId});
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
+  final String title;
+  final num movieId;
+
+  @override
+  State<MovieDetails> createState() => _MovieDetailsState();
+}
+
+class _MovieListState extends State<MovieList> {
+  @override
+  void initState() {
+    // Init widget and fetch movie list
+    super.initState();
+    _fetchMovies();
   }
+
+  List<Movie> movies = [];
+  bool hasError = false;
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: .center,
+    // If movies have been fetched, the list is displayed, else a loader is displayed
+    if (movies.isNotEmpty) {
+      return Scaffold(
+        appBar: AppBar(title: Text(widget.title)),
+        body: Center(
+          child: ListView.builder(
+            itemCount: movies.length,
+            itemBuilder: (context, index) {
+              final curMovie = movies[index];
+              return Container(
+                height: 250,
+                width: 100,
+                color: Colors.white,
+                padding: EdgeInsets.all(20),
+                child: Row(
+                  spacing: 50,
+                  children: [
+                    Image.network(
+                      curMovie.getPosterUrl(),
+                      height: 200,
+                      width: 100,
+                    ),
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(curMovie.title, textScaler: TextScaler.linear(2)),
+                        Text(
+                          "Rating : ${((curMovie.rating * 10).round() / 10).toString()}",
+                          textScaler: TextScaler.linear(1),
+                        ),
+                      ],
+                    ),
+                    TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => MovieDetails(movieId: curMovie.id, title: 'Movie details',),
+                        ),
+                      );
+                    },
+                    child: Text('Details +'),
+                  )
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+        floatingActionButton: FloatingActionButton(
+          child: const Icon(Icons.refresh),
+          onPressed: () {
+            _fetchMovies();
+          },
+        )
+      );
+    } else {
+      if (hasError) {
+        return Scaffold(
+          body: Text("Error : Unable to get movies")
+        );
+      } else {
+        return Scaffold(
+          body: LoadingAnimationWidget.inkDrop(color: Colors.blue, size: 100)
+        );
+      }
+    }
+  }
+
+  // Fetch movies for TMBD API
+  Future _fetchMovies() async {
+    // Clear the list, the loader is shown until data is fetched
+    setState(() {
+      hasError = false;
+      movies.clear();
+    });
+
+    // API call of popular movies
+    final uri = Uri.parse("https://api.themoviedb.org/3/movie/popular");
+    final response = await http.get(
+      uri,
+      headers: {'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json', HttpHeaders.authorizationHeader: 'bearer '},  //TODO: enter your API token here
+    );
+
+    // If there was no error, data is parsed into a list of movies
+    if (response.statusCode == 200) {
+      final body = (jsonDecode(response.body));
+
+      setState(() {
+        final results = body['results'] as List;
+        movies = results.map((item) => Movie.fromJson(item)).toList();
+      });
+    } else {
+      setState(() {
+        hasError = true;
+      });
+      final body = (jsonDecode(response.body));
+      throw Exception(body);
+    }
+  }
+}
+
+class _MovieDetailsState extends State<MovieDetails> {
+  @override
+  void initState() {
+    super.initState();
+    _fetchMovie();
+  }
+
+  dynamic movie;
+  bool hasError = false;
+  
+  @override
+  Widget build(BuildContext context) {
+    if (movie != null) {
+      return Scaffold(
+        appBar: AppBar(title: Text(widget.title)),
+        body: Column(
           children: [
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+            Image.network(movie.getPosterUrl(), height: 400, width: 200),
+            Text(movie.title),
+            Text(((movie.rating * 10).round() / 10).toString()),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: Text('Back'),
             ),
           ],
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ),
+      );
+    } else {
+      if (hasError) {
+        return Scaffold(
+          body: Column(
+            children: [
+              Text("Error : Unable to get movie"),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: Text('Back'),
+              ),
+            ],
+          )
+        );
+      } else {
+        return Scaffold(
+          body: LoadingAnimationWidget.inkDrop(color: Colors.blue, size: 100)
+        );
+      }
+    }
+  }
+
+    // Fetch movie for TMBD API by its id
+  Future _fetchMovie() async {
+    setState(() {
+      hasError = false;
+    });
+
+    // API call of movie by id
+    final uri = Uri.parse("https://api.themoviedb.org/3/movie/${widget.movieId.toString()}");
+    final response = await http.get(
+      uri,
+      headers: {'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json', HttpHeaders.authorizationHeader: 'bearer '},  //TODO: enter your API token here
     );
+
+    // If there was no error, data is parsed into a movie object
+    if (response.statusCode == 200) {
+      final body = (jsonDecode(response.body));
+
+      setState(() {
+        movie = Movie.fromJson(body);
+      });
+    } else {
+      setState(() {
+        hasError = true;
+      });
+      final body = (jsonDecode(response.body));
+      throw Exception(body);
+    }
   }
 }
