@@ -4,5 +4,6 @@ part of 'movie.dart';
 Movie _$MovieFromJson(Map<String, dynamic> json) => Movie(
   json['title'] as String,
   json['poster_path'] as String,
-  (json['vote_average'] as num).toDouble()
+  (json['vote_average'] as num).toDouble(),
+  (json['id'] as num).toDouble()
 );

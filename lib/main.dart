@@ -32,6 +32,16 @@ class MovieList extends StatefulWidget {
   State<MovieList> createState() => _MovieListState();
 }
 
+class MovieDetails extends StatefulWidget {
+  MovieDetails({super.key, required this.title, required this.movieId});
+
+  final String title;
+  final num movieId;
+
+  @override
+  State<MovieDetails> createState() => _MovieDetailsState();
+}
+
 class _MovieListState extends State<MovieList> {
   @override
   void initState() {
@@ -41,6 +51,7 @@ class _MovieListState extends State<MovieList> {
   }
 
   List<Movie> movies = [];
+  bool hasError = false;
 
   @override
   Widget build(BuildContext context) {
@@ -76,6 +87,17 @@ class _MovieListState extends State<MovieList> {
                         ),
                       ],
                     ),
+                    TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => MovieDetails(movieId: curMovie.id, title: 'Movie details',),
+                        ),
+                      );
+                    },
+                    child: Text('Details +'),
+                  )
                   ],
                 ),
               );
@@ -90,9 +112,15 @@ class _MovieListState extends State<MovieList> {
         )
       );
     } else {
+      if (hasError) {
+        return Scaffold(
+          body: Text("Error : Unable to get movies")
+        );
+      } else {
         return Scaffold(
           body: LoadingAnimationWidget.inkDrop(color: Colors.blue, size: 100)
-      );
+        );
+      }
     }
   }
 
@@ -100,6 +128,7 @@ class _MovieListState extends State<MovieList> {
   Future _fetchMovies() async {
     // Clear the list, the loader is shown until data is fetched
     setState(() {
+      hasError = false;
       movies.clear();
     });
 
@@ -107,7 +136,7 @@ class _MovieListState extends State<MovieList> {
     final uri = Uri.parse("https://api.themoviedb.org/3/movie/popular");
     final response = await http.get(
       uri,
-      headers: {'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json', HttpHeaders.authorizationHeader: 'bearer '},  //TODO: enter your API token here
+      headers: {'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json', HttpHeaders.authorizationHeader: 'bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI0YjQwYjhmMzczMTc4ZmJhNTRiNjA1MWQ3ZjY3ZDM2YSIsIm5iZiI6MTc3MzkzMzgyOS4yNDcsInN1YiI6IjY5YmMxNTA1MmVjMzU3ZmY1YjAwZjRjOCIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.skj-oa9AJOeS_0iuhWlyAiGcIgACtfB3xIS__kqu3Q4'},  //TODO: enter your API token here
     );
 
     // If there was no error, data is parsed into a list of movies
@@ -118,6 +147,94 @@ class _MovieListState extends State<MovieList> {
         final results = body['results'] as List;
         movies = results.map((item) => Movie.fromJson(item)).toList();
       });
+    } else {
+      setState(() {
+        hasError = true;
+      });
+      final body = (jsonDecode(response.body));
+      throw Exception(body);
+    }
+  }
+}
+
+class _MovieDetailsState extends State<MovieDetails> {
+  @override
+  void initState() {
+    super.initState();
+    _fetchMovie();
+  }
+
+  dynamic movie;
+  bool hasError = false;
+  
+  @override
+  Widget build(BuildContext context) {
+    if (movie != null) {
+      return Scaffold(
+        appBar: AppBar(title: Text(widget.title)),
+        body: Column(
+          children: [
+            Image.network(movie.getPosterUrl(), height: 400, width: 200),
+            Text(movie.title),
+            Text(((movie.rating * 10).round() / 10).toString()),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: Text('Back'),
+            ),
+          ],
+        ),
+      );
+    } else {
+      if (hasError) {
+        return Scaffold(
+          body: Column(
+            children: [
+              Text("Error : Unable to get movie"),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: Text('Back'),
+              ),
+            ],
+          )
+        );
+      } else {
+        return Scaffold(
+          body: LoadingAnimationWidget.inkDrop(color: Colors.blue, size: 100)
+        );
+      }
+    }
+  }
+
+    // Fetch movie for TMBD API by its id
+  Future _fetchMovie() async {
+    setState(() {
+      hasError = false;
+    });
+
+    // API call of movie by id
+    final uri = Uri.parse("https://api.themoviedb.org/3/movie/${widget.movieId.toString()}");
+    final response = await http.get(
+      uri,
+      headers: {'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json', HttpHeaders.authorizationHeader: 'bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI0YjQwYjhmMzczMTc4ZmJhNTRiNjA1MWQ3ZjY3ZDM2YSIsIm5iZiI6MTc3MzkzMzgyOS4yNDcsInN1YiI6IjY5YmMxNTA1MmVjMzU3ZmY1YjAwZjRjOCIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.skj-oa9AJOeS_0iuhWlyAiGcIgACtfB3xIS__kqu3Q4'},  //TODO: enter your API token here
+    );
+
+    // If there was no error, data is parsed into a movie object
+    if (response.statusCode == 200) {
+      final body = (jsonDecode(response.body));
+
+      setState(() {
+        movie = Movie.fromJson(body);
+      });
+    } else {
+      setState(() {
+        hasError = true;
+      });
+      final body = (jsonDecode(response.body));
+      throw Exception(body);
     }
   }
 }
