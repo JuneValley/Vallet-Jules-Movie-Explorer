@@ -136,7 +136,7 @@ class _MovieListState extends State<MovieList> {
     final uri = Uri.parse("https://api.themoviedb.org/3/movie/popular");
     final response = await http.get(
       uri,
-      headers: {'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json', HttpHeaders.authorizationHeader: 'bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI0YjQwYjhmMzczMTc4ZmJhNTRiNjA1MWQ3ZjY3ZDM2YSIsIm5iZiI6MTc3MzkzMzgyOS4yNDcsInN1YiI6IjY5YmMxNTA1MmVjMzU3ZmY1YjAwZjRjOCIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.skj-oa9AJOeS_0iuhWlyAiGcIgACtfB3xIS__kqu3Q4'},  //TODO: enter your API token here
+      headers: {'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json', HttpHeaders.authorizationHeader: 'bearer '},  //TODO: enter your API token here
     );
 
     // If there was no error, data is parsed into a list of movies
@@ -219,7 +219,7 @@ class _MovieDetailsState extends State<MovieDetails> {
     final uri = Uri.parse("https://api.themoviedb.org/3/movie/${widget.movieId.toString()}");
     final response = await http.get(
       uri,
-      headers: {'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json', HttpHeaders.authorizationHeader: 'bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI0YjQwYjhmMzczMTc4ZmJhNTRiNjA1MWQ3ZjY3ZDM2YSIsIm5iZiI6MTc3MzkzMzgyOS4yNDcsInN1YiI6IjY5YmMxNTA1MmVjMzU3ZmY1YjAwZjRjOCIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.skj-oa9AJOeS_0iuhWlyAiGcIgACtfB3xIS__kqu3Q4'},  //TODO: enter your API token here
+      headers: {'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json', HttpHeaders.authorizationHeader: 'bearer '},  //TODO: enter your API token here
     );
 
     // If there was no error, data is parsed into a movie object
